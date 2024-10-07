@@ -194,24 +194,24 @@ namespace Assets.Serialization
                     break;
 
                 case int i:
-                    throw new NotImplementedException("Fill me in");
+                    Write(i);
                     break;
 
                 case float f:
-                    throw new NotImplementedException("Fill me in");
+                    Write(f);
                     break;
 
                 // Not: don't worry about handling strings that contain quote marks
                 case string s:
-                    throw new NotImplementedException("Fill me in");
+                    Write($"\"{s}\"");
                     break;
 
                 case bool b:
-                    throw new NotImplementedException("Fill me in");
+                    Write(b);
                     break;
 
                 case IList list:
-                    throw new NotImplementedException("Fill me in");
+                    WriteList(list);
                     break;
 
                 default:
@@ -231,7 +231,33 @@ namespace Assets.Serialization
         /// <param name="o">Object to serialize</param>
         private void WriteComplexObject(object o)
         {
-            throw new NotImplementedException("Fill me in");
+            var (id, isNew) = GetId(o);
+
+            // If the object has already been serialized, just write the reference
+            if (!isNew) {
+                Write($"#{id}");
+                return;
+            }
+
+            // Write the complex object in the format #id { type: "typename", fieldname: value, ... }
+            Write($"#{id} {{ ");
+            WriteField("type", o.GetType().Name, true);
+
+            // Use the Utilities to get the fields
+            var fields = o.GetType().GetFields(System.Reflection.BindingFlags.Public |
+                                            System.Reflection.BindingFlags.NonPublic |
+                                            System.Reflection.BindingFlags.Instance);
+            foreach (var field in fields)
+            {
+                // Retrieve the field name and value
+                var fieldName = field.Name;
+                var fieldValue = field.GetValue(o);
+
+                // Write a comma before each field except the first one
+                Write($", {fieldName}: ");
+                WriteObject(fieldValue);
+            }
+            Write(" }");
         }
     }
 }

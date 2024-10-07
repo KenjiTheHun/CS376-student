@@ -284,7 +284,8 @@ namespace Assets.Serialization
             SkipWhitespace();
 
             // You've got the id # of the object.  Are we done now?
-            throw new NotImplementedException("Fill me in");
+            if (idTable.TryGetValue(id, out var existingObj))
+                return existingObj;;
 
             // Assuming we aren't done, let's check to make sure there's a { next
             SkipWhitespace();
@@ -306,14 +307,26 @@ namespace Assets.Serialization
                     $"Expected a type name (a string) in 'type: ...' expression for object id {id}, but instead got {typeName}");
 
             // Great!  Now what?
-            throw new NotImplementedException("Fill me in");
+            // Attempt to resolve the type, search in the current assembly if necessary
+            var objectType = ResolveType(type);
+            if (objectType == null)
+                throw new Exception($"Cannot find type '{type}' to create the object");
+
+            var obj = Activator.CreateInstance(objectType); // Dynamically create the object
+            idTable[id] = obj;  // Register the object
 
             // Read the fields until we run out of them
             while (!End && PeekChar != '}')
             {
-                var (field, value) = ReadField(id);
+                var (fieldName, fieldValue) = ReadField(id);
+                // Find the field and set its value
+                var field = objectType.GetField(fieldName, System.Reflection.BindingFlags.Public | 
+                                                  System.Reflection.BindingFlags.NonPublic | 
+                                                  System.Reflection.BindingFlags.Instance);
+                if (field == null)
+                    throw new Exception($"Field '{fieldName}' not found on type '{type}'");
                 // We've got a field and a value.  Now what?
-                throw new NotImplementedException("Fill me in");
+                field.SetValue(obj, fieldValue); // Assign the field value to the object;
             }
 
             if (End)
@@ -322,7 +335,27 @@ namespace Assets.Serialization
             GetChar();  // Swallow close bracket
 
             // We're done.  Now what?
-            throw new NotImplementedException("Fill me in");
+            return obj;
+        }
+
+        /// <summary>
+        /// Resolves the type by name, attempting to find the type in the current assembly if necessary.
+        /// </summary>
+        /// <param name="typeName">The name of the type to resolve.</param>
+        /// <returns>The resolved Type object, or null if not found.</returns>
+        private Type ResolveType(string typeName)
+        {
+            // Try to resolve the type using Type.GetType()
+            var type = Type.GetType(typeName);
+    
+            // If Type.GetType() failed, try looking in the executing assembly
+            if (type == null)
+            {
+                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                type = assembly.GetType(typeName);
+            }
+
+            return type;
         }
 
     }
