@@ -285,7 +285,7 @@ namespace Assets.Serialization
 
             // You've got the id # of the object.  Are we done now?
             if (idTable.TryGetValue(id, out var existingObj))
-                return existingObj;;
+                return existingObj;
 
             // Assuming we aren't done, let's check to make sure there's a { next
             SkipWhitespace();
@@ -308,11 +308,11 @@ namespace Assets.Serialization
 
             // Great!  Now what?
             // Attempt to resolve the type, search in the current assembly if necessary
-            var objectType = ResolveType(type);
+            var objectType = Type.GetType("FakeUnity." + type);
             if (objectType == null)
                 throw new Exception($"Cannot find type '{type}' to create the object");
 
-            var obj = Activator.CreateInstance(objectType); // Dynamically create the object
+            var obj = Utilities.MakeInstance(type); // Dynamically create the object
             idTable[id] = obj;  // Register the object
 
             // Read the fields until we run out of them
@@ -326,7 +326,7 @@ namespace Assets.Serialization
                 if (field == null)
                     throw new Exception($"Field '{fieldName}' not found on type '{type}'");
                 // We've got a field and a value.  Now what?
-                field.SetValue(obj, fieldValue); // Assign the field value to the object;
+                Utilities.SetFieldByName(obj, fieldName, fieldValue); // Assign the field value to the object;
             }
 
             if (End)
@@ -336,26 +336,6 @@ namespace Assets.Serialization
 
             // We're done.  Now what?
             return obj;
-        }
-
-        /// <summary>
-        /// Resolves the type by name, attempting to find the type in the current assembly if necessary.
-        /// </summary>
-        /// <param name="typeName">The name of the type to resolve.</param>
-        /// <returns>The resolved Type object, or null if not found.</returns>
-        private Type ResolveType(string typeName)
-        {
-            // Try to resolve the type using Type.GetType()
-            var type = Type.GetType(typeName);
-    
-            // If Type.GetType() failed, try looking in the executing assembly
-            if (type == null)
-            {
-                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-                type = assembly.GetType(typeName);
-            }
-
-            return type;
         }
 
     }
