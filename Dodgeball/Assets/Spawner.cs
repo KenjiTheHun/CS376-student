@@ -13,7 +13,12 @@ public class Spawner : MonoBehaviour
     /// <summary>
     /// Seconds between spawn operations
     /// </summary>
-    public float SpawnInterval = 20;
+    public float SpawnInterval = 20f;
+
+    /// <summary>
+    /// Time of the next spawn operation
+    /// </summary>
+    public float nextSpawnTime = 0f;
 
     /// <summary>
     /// How many units of free space to try to find around the spawned object
@@ -27,5 +32,16 @@ public class Spawner : MonoBehaviour
     void Update()
     {
         // TODO
+        if (Time.time > nextSpawnTime)
+        {
+            Spawn();
+            nextSpawnTime = Time.time + SpawnInterval;
+        }
+    }
+
+    void Spawn()
+    {
+        Vector2 spawnPosition = SpawnUtilities.RandomFreePoint(FreeRadius);
+        Instantiate(Prefab, spawnPosition, Quaternion.identity);
     }
 }

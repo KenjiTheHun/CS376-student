@@ -48,22 +48,26 @@ public class BarGraph : MonoBehaviour
     {
         // TODO: Set the text to the name of this game object
         Text.text = name;
-        
+
         // This sets width to the width of the widget on screen
         var rectTransform = (RectTransform)transform;
         var width = rectTransform.sizeDelta.x * rectTransform.localScale.x;
 
         // TODO: If we're going to display signed numbers, then move the bar to the middle of the widget
         // and set signedDisplay to true.
-        signedDisplay = Min < 0;
+        //
+        if (Min < 0 || Max < 0) 
+        {
+            signedDisplay = true;
+            BarTransform.localPosition = new Vector2(width / 2, BarTransform.localPosition.y);
+        }
+
         // You can figure out if we're displaying signed numbers by looking at Min and/or Max.
         // Do they allow for the value being negative?
         //
         // You can move the bar to the middle of the widget by setting the x coordinate of its localPosition
         // to half the width (see above) of the widget.
-        if (signedDisplay) {
-            BarTransform.localPosition = new Vector2(width / 2, BarTransform.localPosition.y);
-        }
+        //
         // Important: remember that This BarGraph component is in a different game object than the
         // Bar.  So they have different RectTransforms.  How do you get the transform for the bar?
         
@@ -76,35 +80,31 @@ public class BarGraph : MonoBehaviour
     /// <param name="value">Value to display</param>
     public void SetReading(float value)
     {
-        var barColor = Color.green;
         // TODO: Determine the color to display it in.
         // If it's out of range, display it in red
         // Otherwise, use green for positive values and blue for negative ones
-        if (value < Min || value > Max) {
-            barColor = Color.red;
-        }
-        else if (value >= 0) {
-            barColor = Color.green;
-        }
-        else {
-            barColor = Color.blue;
-        }
+        var color = Color.green;
 
+        if (value < Min || value > Max)
+        {
+            color = Color.red;
+        }
+        else if (value <= 0)
+        {
+            color = Color.blue;
+        }
+        
         // TODO: if value is out of range (less than Min, greater than Max),
         // then move it in range (set it to Min/Max) so the bar doesn't draw
         // outside the widget.
-        if (value < Min) {
-            value = Min;
-        }
-        else if (value > Max) {
-            value = Max;
-        }
+        if (value < Min) value = Min;
+        if (value > Max) value = Max;
 
         // TODO: Call SetWidthPercent to change the width of the bar and set its color
-        SetWidthPercent(value, barColor);
-
+        SetWidthPercent(value, color);
+        
         // TODO: Update the text to read: {name} : {value}
-        Text.text = $"{name} : {value}";
+        Text.text = name + " : " + value;
     }
 
     /// <summary>
@@ -119,12 +119,20 @@ public class BarGraph : MonoBehaviour
     {
         // TODO: Set the color of the bar to c
         BarImage.color = c;
-
+        
         // TODO: Change BarTransform.localScale so that its x component is scaled by value.
         // If we're using signedDisplay, then we also want to cut the scale by a half so we can 
         // have half the widget for positive values and half for negative ones.
         // Leave the localScale's y component as is.
-        BarTransform.localScale = new Vector3(value * (signedDisplay ? 0.5f : 1), BarTransform.localScale.y);
+
+        if (signedDisplay)
+        {
+            BarTransform.localScale = new Vector2(value * 0.5f, BarTransform.localScale.y);
+        }
+        else
+        {
+            BarTransform.localScale = new Vector2(value, BarTransform.localScale.y);
+        }
         
     }
 
@@ -148,13 +156,13 @@ public class BarGraph : MonoBehaviour
     public static BarGraph Find(string name, Vector2 position, float min, float max)
     {
         // TODO: Check if we've already made a bargraph of this name.  If so, return it.
-        if (BarGraphTable.TryGetValue(name, out BarGraph existingWidget)) {
-            return existingWidget;
+        if (BarGraphTable.ContainsKey(name)) 
+        {
+            return BarGraphTable[name];
         }
         //
         // Otherwise, we need to make a new one
         //
-
         // The UI system requires that all UI widgets be inside of the GameObject that has the Canvas component.
         // So find the canvas component
         var canvas = FindObjectOfType<Canvas>();
@@ -173,7 +181,7 @@ public class BarGraph : MonoBehaviour
         // TODO set bgComponent's Min and Max fields to min and max
         bgComponent.Min = min;
         bgComponent.Max = max;
-        
+
         // Add the BarGraph component to the table
         BarGraphTable[name] = bgComponent;
 
@@ -190,11 +198,7 @@ public class BarGraph : MonoBehaviour
         get
         {
             // TODO: return prefab is null, set it to Resources.Load<GameObject>("BarGraph")
-            if (prefab != null) {
-                return prefab;
-            }
-
-            prefab = Resources.Load<GameObject>("BarGraph");
+            if (prefab == null) prefab = Resources.Load<GameObject>("BarGraph");
 
             // Now that prefab isn't null, we can return it.
             return prefab;
