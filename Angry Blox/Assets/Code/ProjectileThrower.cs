@@ -60,6 +60,11 @@ public class ProjectileThrower : MonoBehaviour {
         return !IsOffScreen(o) && o.GetComponent<Rigidbody2D>().IsAwake();
     }
 
+    /// <summary>
+    /// True if we are still waiting for this object to finish falling or settling.
+    /// </summary>
+    /// <param name="rb">RigidBody2D</param>
+    /// <returns></returns>
     bool IsActive(Rigidbody2D rb)
     {
         return IsActive(rb.gameObject);
@@ -71,9 +76,12 @@ public class ProjectileThrower : MonoBehaviour {
     /// <returns></returns>
     bool WaitingForPhysicsToSettle()
     {
-        if (myRigidBody.isAwake() && !myRigidBody.IsOffScreen()) {
-            return true;
+        foreach (var rb in FindObjectsOfType<Rigidbody2D>())
+        {
+            if (IsActive(rb))
+                return true;
         }
+        return false;
     }
 
     /// <summary>
