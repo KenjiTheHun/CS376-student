@@ -77,6 +77,14 @@ public class PlayerControl : MonoBehaviour {
     /// Current thrust (forward force provided by engines
     /// </summary>
     private float thrust;
+
+    private float joystickRoll;
+
+    private float joystickPitch;
+
+    private float joystickThrust;
+
+    private float weight = 0.1f;
 #endregion
 
     /// <summary>
@@ -111,5 +119,55 @@ public class PlayerControl : MonoBehaviour {
             playerRB.velocity.magnitude,
             transform.position.y,
             thrust);
+    }
+
+    private void FixedUpdate()
+    {
+        // Get the current state of the joystick
+        joystickRoll = Input.GetAxis("Horizontal");
+        joystickPitch = Input.GetAxis("Vertical");
+        joystickThrust = Input.GetAxis("Thrust");
+
+        // Calculate the lift and drag forces
+        float forwardSpeed = Vector3.Dot(-playerRB.velocity, transform.forward);
+        Vector3 lift = LiftCoefficient * Mathf.Pow(forwardSpeed, 2) * transform.up;
+        Vector3 forwardDrag = Mathf.Sign(forwardSpeed) * ForwardDragCoefficient * Mathf.Pow(forwardSpeed, 2) * transform.forward;
+
+        // Calculate the vertical drag force
+        float verticalSpeed = Vector3.Dot(-playerRB.velocity, transform.up);
+        Vector3 verticalDrag = Mathf.Sign(verticalSpeed) * VerticalDragCoefficient * Mathf.Pow(verticalSpeed, 2) * transform.up;
+
+        // Calculate the thrust force
+        joystickThrust = Mathf.Clamp(joystickThrust, 0, 1);
+        thrust = MaximumThrust * joystickThrust;
+        Vector3 thrustForce = transform.forward * thrust;
+        playerRB.AddForce(thrustForce);
+
+        // Calculate the total force
+        Vector3 totalForce = lift + forwardDrag + verticalDrag;
+
+        // Calculate the pitch, roll, and yaw
+        pitch = Mathf.Lerp(pitch, joystickPitch * PitchRange, weight);
+        roll = Mathf.Lerp(roll, joystickRoll * RollRange, weight);
+        yaw = -roll * RotationalSpeed;
+
+        // Calculate the rotation
+        Quaternion rotation = Quaternion.Euler(pitch, yaw, roll);
+
+        // Apply the rotation
+        playerRB.MoveRotation(rotation);
+        playerRB.AddForce(totalForce);
+    }
+
+    private void OnCollisionEnter(Collision other)
+    {
+        if (other.gameObject.CompareTag("LandingPlatform") & other.gameObject.GetComponent<LandingPlatform>().MaxLandingSpeed > playerRB.velocity.magnitude)
+        {
+            OnGameOver(true);
+        }
+        else
+        {
+            OnGameOver(false);
+        }
     }
 }
